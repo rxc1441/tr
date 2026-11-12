@@ -1,0 +1,16 @@
+[workspace]
+authors = ["Robert Cocker <rceacct@proton.me>"]
+channels = ['conda-forge']
+name = "tr"
+platforms = ['linux-64']
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+nano = ">=9.3,<10"
+python = ">=3.15.2,<3.16"
+bat = ">=0.26.1,<0.27"
+cvss = ">=3.6,<4"
+datetime = ">=6.0,<7"
+urllib3 = ">=2.8.0,<3"
