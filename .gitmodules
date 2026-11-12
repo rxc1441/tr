@@ -1,0 +1,3 @@
+[submodule "contrib/darnit"]
+	path = contrib/darnit
+	url = https://github.com/darnitdevorg/darnit.git
