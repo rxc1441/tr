@@ -6,7 +6,9 @@ import urllib.request
 
 try:
     from cvss import CVSS3
+
     HAS_CVSS_LIB = True
+
 except ImportError:
     HAS_CVSS_LIB = False
 
@@ -38,7 +40,7 @@ def check_http_redirect(hostname):
         headers={"User-Agent": "Mozilla/5.0 (Security-Audit-Script)"},
     )
     try:
-        with opener.open(req, timeout=5) as resp:
+        with opener.open(req, timeout=5):
             log_finding(
                 title="Unencrypted HTTP accessible without HTTPS redirect",
                 default_severity="HIGH",
@@ -58,7 +60,7 @@ def check_http_redirect(hostname):
                 default_score=5.3,
                 remediation=f"Ensure port 80 redirects directly to https://{hostname}",
             )
-    except Exception as e:
+    except OSError as e:
         print(f"[INFO] Port 80 unreachable or closed ({e})")
 
 
@@ -98,40 +100,39 @@ def audit_target(hostname, port=443):
     context = ssl.create_default_context()
 
     try:
-        with socket.create_connection((hostname, port), timeout=5) as sock:
-            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
-                cert = ssock.getpeercert()
-                protocol = ssock.version()
-                cipher = ssock.cipher()
+        with (
+            socket.create_connection((hostname, port), timeout=5) as sock,
+            context.wrap_socket(sock, server_hostname=hostname) as ssock,
+        ):
+            cert = ssock.getpeercert()
+            protocol = ssock.version()
+            cipher = ssock.cipher()
 
-                not_after = datetime.datetime.strptime(
-                    cert["notAfter"], "%b %d %H:%M:%S %Y %Z"
-                ).replace(tzinfo=datetime.UTC)
-                now = datetime.datetime.now(datetime.UTC)
-                days_left = (not_after - now).days
+            not_after = datetime.datetime.strptime(
+                cert["notAfter"], "%b %d %H:%M:%S %Y %Z"
+            ).replace(tzinfo=datetime.UTC)
+            now = datetime.datetime.now(datetime.UTC)
+            days_left = (not_after - now).days
 
-                print(f"[TLS] Protocol: {protocol} (Cipher: {cipher[0]})")
-                print(
-                    f"[TLS] Certificate expires in {days_left} days"
-                    f" ({cert['notAfter']})"
+            print(f"[TLS] Protocol: {protocol} (Cipher: {cipher[0]})")
+            print(f"[TLS] Certificate expires in {days_left} days ({cert['notAfter']})")
+
+            if protocol in ("TLSv1", "TLSv1.1"):
+                log_finding(
+                    title=f"Outdated TLS protocol detected ({protocol})",
+                    default_severity="HIGH",
+                    cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                    default_score=5.9,
+                    remediation="Upgrade server configuration to TLS 1.2 or 1.3.",
                 )
-
-                if protocol in ("TLSv1", "TLSv1.1"):
-                    log_finding(
-                        title=f"Outdated TLS protocol detected ({protocol})",
-                        default_severity="HIGH",
-                        cvss_vector="CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                        default_score=5.9,
-                        remediation="Upgrade server configuration to TLS 1.2 or 1.3.",
-                    )
-                if days_left < 30:
-                    log_finding(
-                        title=f"Certificate expires soon ({days_left} days left)",
-                        default_severity="LOW",
-                        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
-                        default_score=3.7,
-                        remediation="Renew TLS certificate before expiration.",
-                    )
+            if days_left < 30:
+                log_finding(
+                    title=f"Certificate expires soon ({days_left} days left)",
+                    default_severity="LOW",
+                    cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                    default_score=3.7,
+                    remediation="Renew TLS certificate before expiration.",
+                )
 
     except ssl.SSLCertVerificationError as e:
         log_finding(
@@ -142,7 +143,8 @@ def audit_target(hostname, port=443):
             remediation="Install a valid certificate signed by a trusted CA.",
         )
         return
-    except Exception as e:
+
+    except OSError as e:
         print(f"[ERROR] Connection failed: {e}")
         return
 
@@ -193,6 +195,7 @@ def audit_target(hostname, port=443):
             response = urllib.request.urlopen(req, timeout=5)
             status_code = response.status
             raw_headers = response.getheaders()
+
         except urllib.error.HTTPError as e:
             status_code = e.code
             raw_headers = e.headers.items()
@@ -219,12 +222,12 @@ def audit_target(hostname, port=443):
 
         check_cookies(raw_headers)
 
-    except Exception as e:
+    except OSError as e:
         print(f"[ERROR] HTTP request failed: {e}")
 
 
 if __name__ == "__main__":
-    targets = ["defsec.club", "robertcocker.com", "rxc1441.github.io"]
+    targets = ["github.com"]
 
     for domain in targets:
         audit_target(domain)
