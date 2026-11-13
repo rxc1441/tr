@@ -1,3 +1,4 @@
+#!/usr/env/bin python3
 import datetime
 import socket
 import ssl
@@ -227,7 +228,38 @@ def audit_target(hostname, port=443):
 
 
 if __name__ == "__main__":
-    targets = ["github.com"]
+    targets = [
+        "github.com",
+        "dallascollege.edu",
+        "tccd.edu",
+        "uta.edu",
+        "utsa.edu",
+        "dsu.edu",
+        "acmuta.com",
+        "utacsec.com",
+        "lugtnuts.org",
+        "dsucomputer.club",
+        "ctf.club",
+        "offsec.club",
+        "defsec.club",
+        "disa.mil",
+        "nsa.gov",
+        "fbi.gov",
+        "cia.gov",
+        "cisa.gov",
+        "nga.mil",
+        "chatgpt.com",
+        "chat.openai.com",
+        "api.openai.com",
+        "openai.com",
+        "openai.org",
+        "patchtheplanet.org",
+        "claude.ai",
+        "claude.com",
+        "anthropic.com",
+        "cloudflare.com",
+        "google.com",
+    ]
 
     for domain in targets:
         audit_target(domain)
